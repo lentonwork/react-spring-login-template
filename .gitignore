@@ -1,0 +1,6 @@
+#Add files here that shouldn't be tracked by git
+
+.env
+package-lock.json
+package.json
+
