@@ -58,13 +58,13 @@ jobs:
         # This step defines new terraform variables so the infra is reapplied to pickup the latest container pushed to GCR
       - name: Redeploy terraform
         run: |
-          cd terraform
+           cd terraform
 #          cat > terraform.tfvars << EOT
 #          frontend_image_tag = "$GITHUB_SHA"
 #          backend_image_tag = "$GITHUB_SHA"
 #          EOT
-          terraform init
-          terraform apply -auto-approve
+           terraform init
+           terraform apply -auto-approve
 
   # This step makes curl requests to the deployed GCP apps to test the app has been successfully deployed.
   Prod-Tests:
