@@ -1,1 +1,80 @@
-#This workflow is the CI pipeline through which pull-requests pass to github repo
+name: CIPipeline
+
+# This workflow will be initiated on both a git push, and manually pressing a button on the console.
+on: [push, workflow_dispatch]
+jobs:
+  Backend-Unit-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      # Drops the github runner in the root of the git repo
+      - uses: actions/checkout@v2
+
+      # This step builds the docker containers as though it were a dev environment and executes unit tests on the backend.
+      - name: Run Dev Unit Tests
+        run: |
+          echo "The Dev Environment Tests can run here"
+
+  Deploy-Images:
+    # This job needs to access our Groovy-secrets github environment so it can log in to push images to GCR
+#    environment: Github-secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to GCR
+
+        # This gives docker the permissions to push images directly to GCR
+#        uses: docker/login-action@v1
+
+        # Getting the login details from github secrets
+#        with:
+#          registry: eu.gcr.io
+#          username: _json_key
+#          password: ${{ secrets.GCR_JSON_KEY }}
+
+        # This overwrites the dev environment variables with those needed for prod. It builds the containers using both
+        # docker-compose.yaml and docker-compose-pipeline.yaml, and tags them with the github commit sha so each version can be referred to uniquely.
+      - name: Build and push the stack
+        run: |
+           echo "The Containers are pushed to GCR here"
+#          docker-compose -f docker-compose.yml -f docker-compose-pipeline.yml up --detach
+#          docker ps
+#          docker push eu.gcr.io/grad-program-shared-f4fg/backend:$GITHUB_SHA
+#          docker push eu.gcr.io/grad-program-shared-f4fg/frontend:$GITHUB_SHA
+
+  Redeploy-Infra:
+    needs: Deploy-Images
+#    environment: Groovy-secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to gcloud
+#        uses: google-github-actions/setup-gcloud@master
+#        with:
+#          project_id: grad-program-shared-f4fg
+#          service_account_key: ${{ secrets.GCR_JSON_KEY }}
+#          export_default_credentials: true
+      - name: Check logged in
+#        run: gcloud info
+        # This step defines new terraform variables so the infra is reapplied to pickup the latest container pushed to GCR
+      - name: Redeploy terraform
+        run: |
+          cd terraform
+#          cat > terraform.tfvars << EOT
+#          frontend_image_tag = "$GITHUB_SHA"
+#          backend_image_tag = "$GITHUB_SHA"
+#          EOT
+          terraform init
+          terraform apply -auto-approve
+
+  # This step makes curl requests to the deployed GCP apps to test the app has been successfully deployed.
+  Prod-Tests:
+    needs: Redeploy-Infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Tests
+        run: |
+          echo "The Prod env tests can run here"
+#          cd unit-tests
+#          chmod ogu+x prod-tests.sh
+#          ./prod-tests.sh

@@ -1,1 +1,58 @@
-#Build all containers and allow communication using this file
+version: "3.7"
+
+services:
+  backend:
+    build:
+      # Uses the dockerfile in the backend directory to build the backend container
+      context: backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
+    depends_on:
+      - db # This service depends on database. Start that first.
+    environment: # Pass environment variables from .env to the service. NOTE THESE ARE ONLY AVAILABLE AT BUILDTIME.
+      SPRING_DATASOURCE_URL: ${db_url}
+      SPRING_DATASOURCE_USERNAME: ${db_username}
+      SPRING_DATASOURCE_PASSWORD: ${db_password}
+      DATABASE_IP: ${database_ip}
+    networks: # Networks to join (Services on the same network can communicate with each other using their name)
+      - frontend
+      - backend_connection
+
+# Frontend Service
+  frontend:
+    build:
+      context: frontend # Use the dockerfile in frontend directory to build the frontend container.
+      dockerfile: Dockerfile
+    ports:
+      - "9090:80" # Map the exposed port 80 on the container to port 9090 on the host machine.
+
+    # Restarts the frontend container if it exits with exit code 1.
+    restart: always
+
+    depends_on:
+      - backend # This service depends on the backend. Start that first.
+    networks:
+      - frontend
+
+# Database Service ()
+  db:
+    build:
+      context: database
+      dockerfile: Dockerfile
+    # The database can be accessed using the credentials defined below
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_ROOT_PASSWORD: root
+    networks:
+      - backend_connection
+    ports:
+      - "5432:5432" # Map the exposed port 5432 on the container to port 5432 on the host machine.
+
+# Networks to be created to facilitate communication between containers
+networks:
+  frontend:
+  backend_connection:
+
